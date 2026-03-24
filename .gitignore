@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+output/
+cache/
+test_tmp/
+test_render_output/
