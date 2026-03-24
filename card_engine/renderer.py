@@ -85,6 +85,8 @@ def render_recipe_docx(
 
     # KCAL
     _add_bold_heading(doc, "KCAL")
+    # Per-portion kcal is only accurate from full recipe metrics (calculate_card_metrics).
+    # The research fallback uses the first ingredient's kcal/100g as a rough indicator only.
     kcal_result = next((r for r in research if not r.todo and r.kcal_per_100g > 0), None)
     if metrics and metrics.get("kcal_per_serving", 0) > 0:
         kcal_text = f"{metrics['kcal_per_serving']:.0f} kcal per portion (estimated)"

@@ -124,9 +124,10 @@ def parse_file(path: str) -> list[RecipeParsed]:
     text = p.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
 
+    RAW_DUMP_FILENAME = "raw_dump.txt"
     # Detect if this is a multi-recipe dump (2+ blank lines separator)
     blank_runs = re.findall(r"\n{3,}", text)
-    if blank_runs or p.name == "raw_dump.txt":
+    if blank_runs or p.name == RAW_DUMP_FILENAME:
         blocks = _split_into_blocks(lines)
     else:
         blocks = [lines]

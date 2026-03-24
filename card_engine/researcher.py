@@ -267,7 +267,8 @@ def compute_cost_range(candidates: list[dict]) -> dict:
     """
     candidates: list of {unit_price_per_g: float, source: str}
     Returns {low_avg: float, high_avg: float, notes: str}
-    using half-split mean.
+    using half-split mean (same algorithm as calculator.half_split_mean, inlined here
+    to avoid a circular import between researcher and calculator).
     """
     if not candidates:
         return {"low_avg": 0.0, "high_avg": 0.0, "notes": "no data"}
