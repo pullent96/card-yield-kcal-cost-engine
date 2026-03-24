@@ -51,8 +51,9 @@ def render_recipe_docx(
     # Yield
     _add_bold_heading(doc, "Yield")
     total_g = 0.0
+    _weight_re = re.compile(r"(\d+(?:\.\d+)?)\s*(g|kg)\b", re.IGNORECASE)
     for ing in recipe.ingredients_raw:
-        m = re.search(r"(\d+(?:\.\d+)?)\s*(g|kg)\b", ing, re.IGNORECASE)
+        m = _weight_re.search(ing)
         if m:
             val = float(m.group(1))
             if m.group(2).lower() == "kg":
