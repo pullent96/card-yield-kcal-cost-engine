@@ -23,6 +23,162 @@ except ImportError:
     _REQUESTS_AVAILABLE = False
     logger.warning("requests/beautifulsoup4 not available; researcher will return TODO results")
 
+# ---------------------------------------------------------------------------
+# Static UK ingredient data (Tesco / Sainsbury's typical prices, early 2025).
+# Each entry: keyword → {low: £/100g, high: £/100g, kcal: kcal/100g}
+# Keywords are matched case-insensitively as substrings of the cleaned
+# ingredient name, checked in order — more specific entries first.
+# ---------------------------------------------------------------------------
+_STATIC_UK_DATA: list[tuple[str, dict]] = [
+    # ── Meats ──────────────────────────────────────────────────────────────
+    ("chicken thigh",       {"low": 0.38, "high": 0.55, "kcal": 177}),
+    ("chicken breast",      {"low": 0.45, "high": 0.65, "kcal": 165}),
+    ("chicken",             {"low": 0.38, "high": 0.55, "kcal": 165}),
+    ("minced beef",         {"low": 0.55, "high": 0.80, "kcal": 225}),
+    ("beef mince",          {"low": 0.55, "high": 0.80, "kcal": 225}),
+    ("brisket",             {"low": 0.70, "high": 0.95, "kcal": 155}),
+    ("pork shoulder",       {"low": 0.50, "high": 0.75, "kcal": 215}),
+    ("pork ribs",           {"low": 0.55, "high": 0.80, "kcal": 240}),
+    ("ribs",                {"low": 0.55, "high": 0.80, "kcal": 240}),
+    ("veal knuckle",        {"low": 0.65, "high": 0.95, "kcal": 150}),
+    ("pig trotter",         {"low": 0.30, "high": 0.50, "kcal": 185}),
+    ("marrow bone",         {"low": 0.35, "high": 0.55, "kcal": 175}),
+    ("chicken feet",        {"low": 0.20, "high": 0.40, "kcal": 215}),
+    ("meat",                {"low": 0.45, "high": 0.80, "kcal": 180}),
+    # ── Dairy & eggs ───────────────────────────────────────────────────────
+    ("clarified butter",    {"low": 0.55, "high": 0.75, "kcal": 900}),
+    ("beef dripping",       {"low": 0.30, "high": 0.50, "kcal": 900}),
+    ("butter",              {"low": 0.45, "high": 0.65, "kcal": 717}),
+    ("double cream",        {"low": 0.28, "high": 0.45, "kcal": 340}),
+    ("cream",               {"low": 0.28, "high": 0.45, "kcal": 340}),
+    ("milk",                {"low": 0.05, "high": 0.08, "kcal": 61}),
+    ("cheddar",             {"low": 0.45, "high": 0.70, "kcal": 402}),
+    ("grated cheese",       {"low": 0.45, "high": 0.70, "kcal": 402}),
+    ("cheese",              {"low": 0.45, "high": 0.70, "kcal": 402}),
+    ("egg yolk",            {"low": 0.55, "high": 0.75, "kcal": 322}),
+    ("egg white",           {"low": 0.35, "high": 0.55, "kcal": 52}),
+    ("egg",                 {"low": 0.35, "high": 0.55, "kcal": 143}),
+    # ── Flours, grains, dry goods ───────────────────────────────────────────
+    ("strong flour",        {"low": 0.08, "high": 0.12, "kcal": 341}),
+    ("plain flour",         {"low": 0.07, "high": 0.11, "kcal": 341}),
+    ("flour",               {"low": 0.07, "high": 0.12, "kcal": 341}),
+    ("brown sugar",         {"low": 0.07, "high": 0.12, "kcal": 373}),
+    ("sugar",               {"low": 0.06, "high": 0.10, "kcal": 387}),
+    ("yeast",               {"low": 0.40, "high": 0.65, "kcal": 105}),
+    ("pink curing salt",    {"low": 0.15, "high": 0.30, "kcal": 0}),
+    ("salt",                {"low": 0.03, "high": 0.07, "kcal": 0}),
+    # ── Oils & fats ────────────────────────────────────────────────────────
+    ("olive oil",           {"low": 0.25, "high": 0.45, "kcal": 884}),
+    ("neutral oil",         {"low": 0.10, "high": 0.18, "kcal": 900}),
+    ("sunflower oil",       {"low": 0.10, "high": 0.18, "kcal": 900}),
+    ("oil",                 {"low": 0.10, "high": 0.20, "kcal": 884}),
+    # ── Vinegars, wines, acids ──────────────────────────────────────────────
+    ("red wine vinegar",    {"low": 0.06, "high": 0.12, "kcal": 18}),
+    ("white wine vinegar",  {"low": 0.06, "high": 0.12, "kcal": 18}),
+    ("balsamic vinegar",    {"low": 0.15, "high": 0.30, "kcal": 88}),
+    ("vinegar",             {"low": 0.05, "high": 0.10, "kcal": 18}),
+    ("red wine",            {"low": 0.05, "high": 0.10, "kcal": 68}),
+    ("white wine",          {"low": 0.05, "high": 0.10, "kcal": 77}),
+    ("lime juice",          {"low": 0.12, "high": 0.22, "kcal": 25}),
+    ("lemon juice",         {"low": 0.10, "high": 0.20, "kcal": 22}),
+    ("citrus",              {"low": 0.12, "high": 0.22, "kcal": 25}),
+    # ── Sauces, pastes, stocks ──────────────────────────────────────────────
+    ("tomato purée",        {"low": 0.14, "high": 0.22, "kcal": 83}),
+    ("tomato paste",        {"low": 0.14, "high": 0.22, "kcal": 83}),
+    ("tomato puree",        {"low": 0.14, "high": 0.22, "kcal": 83}),
+    ("soy sauce",           {"low": 0.10, "high": 0.18, "kcal": 53}),
+    ("mustard",             {"low": 0.12, "high": 0.25, "kcal": 66}),
+    ("honey",               {"low": 0.35, "high": 0.55, "kcal": 304}),
+    ("syrup",               {"low": 0.20, "high": 0.40, "kcal": 280}),
+    ("chicken stock",       {"low": 0.04, "high": 0.08, "kcal": 8}),
+    ("fish stock",          {"low": 0.05, "high": 0.10, "kcal": 8}),
+    ("brown stock",         {"low": 0.04, "high": 0.08, "kcal": 10}),
+    ("stock",               {"low": 0.04, "high": 0.08, "kcal": 8}),
+    # ── Spices & dried herbs ────────────────────────────────────────────────
+    ("smoked paprika",      {"low": 0.55, "high": 0.85, "kcal": 282}),
+    ("paprika",             {"low": 0.50, "high": 0.80, "kcal": 282}),
+    ("black pepper",        {"low": 0.45, "high": 0.70, "kcal": 251}),
+    ("pepper",              {"low": 0.45, "high": 0.70, "kcal": 251}),
+    ("garlic powder",       {"low": 0.50, "high": 0.80, "kcal": 331}),
+    ("onion powder",        {"low": 0.50, "high": 0.80, "kcal": 341}),
+    ("chilli powder",       {"low": 0.50, "high": 0.80, "kcal": 282}),
+    ("ground mustard",      {"low": 0.45, "high": 0.75, "kcal": 452}),
+    ("mustard powder",      {"low": 0.45, "high": 0.75, "kcal": 452}),
+    ("ground cumin",        {"low": 0.50, "high": 0.80, "kcal": 375}),
+    ("cumin",               {"low": 0.50, "high": 0.80, "kcal": 375}),
+    ("allspice",            {"low": 0.55, "high": 0.85, "kcal": 263}),
+    ("thyme",               {"low": 0.40, "high": 0.65, "kcal": 101}),
+    ("bay",                 {"low": 0.35, "high": 0.60, "kcal": 313}),
+    ("nutmeg",              {"low": 0.60, "high": 0.95, "kcal": 525}),
+    ("dried herbs",         {"low": 0.40, "high": 0.70, "kcal": 150}),
+    ("herbs",               {"low": 0.35, "high": 0.65, "kcal": 150}),
+    ("spices",              {"low": 0.45, "high": 0.75, "kcal": 200}),
+    # ── Fresh produce ───────────────────────────────────────────────────────
+    ("scotch bonnet",       {"low": 0.35, "high": 0.60, "kcal": 40}),
+    ("red pepper",          {"low": 0.12, "high": 0.22, "kcal": 31}),
+    ("chilli",              {"low": 0.20, "high": 0.35, "kcal": 40}),
+    ("parsley",             {"low": 0.28, "high": 0.50, "kcal": 36}),
+    ("parsley stalks",      {"low": 0.25, "high": 0.45, "kcal": 36}),
+    ("shallot",             {"low": 0.20, "high": 0.35, "kcal": 72}),
+    ("garlic",              {"low": 0.18, "high": 0.35, "kcal": 149}),
+    ("onion",               {"low": 0.06, "high": 0.12, "kcal": 40}),
+    ("carrot",              {"low": 0.06, "high": 0.12, "kcal": 41}),
+    ("celery",              {"low": 0.08, "high": 0.15, "kcal": 16}),
+    ("tomatoes",            {"low": 0.08, "high": 0.15, "kcal": 24}),
+    ("tomato",              {"low": 0.08, "high": 0.15, "kcal": 24}),
+    ("baby potatoes",       {"low": 0.08, "high": 0.14, "kcal": 77}),
+    ("potatoes",            {"low": 0.07, "high": 0.12, "kcal": 77}),
+    ("potato",              {"low": 0.07, "high": 0.12, "kcal": 77}),
+    ("lime",                {"low": 0.18, "high": 0.30, "kcal": 30}),
+    ("lemon",               {"low": 0.15, "high": 0.25, "kcal": 29}),
+    # ── Chocolate & confectionery ───────────────────────────────────────────
+    ("dark chocolate",      {"low": 0.55, "high": 0.90, "kcal": 546}),
+    ("chocolate",           {"low": 0.50, "high": 0.85, "kcal": 530}),
+    # ── Specialist / modernist hydrocolloids ───────────────────────────────
+    ("agar",                {"low": 1.50, "high": 2.50, "kcal": 0}),
+    ("gelatine",            {"low": 0.90, "high": 1.50, "kcal": 335}),
+    ("gelatine leaf",       {"low": 0.90, "high": 1.50, "kcal": 335}),
+    ("xanthan",             {"low": 1.80, "high": 3.00, "kcal": 0}),
+    ("ultratex",            {"low": 2.20, "high": 3.50, "kcal": 0}),
+    ("gellaspessa",         {"low": 2.00, "high": 3.50, "kcal": 0}),
+    ("pectin",              {"low": 1.10, "high": 2.00, "kcal": 160}),
+    ("lecithin",            {"low": 1.50, "high": 2.50, "kcal": 763}),
+    # ── Water / wood chips (zero cost, zero kcal) ───────────────────────────
+    ("cold water",          {"low": 0.00, "high": 0.00, "kcal": 0}),
+    ("water",               {"low": 0.00, "high": 0.00, "kcal": 0}),
+    ("wood chips",          {"low": 0.00, "high": 0.00, "kcal": 0}),
+]
+
+# Pre-compile lowercase keys for fast lookup
+_STATIC_UK_DATA_LOWER: list[tuple[str, dict]] = [
+    (kw.lower(), v) for kw, v in _STATIC_UK_DATA
+]
+
+
+def _clean_ingredient_text(raw: str) -> str:
+    """Strip quantities, units, parenthetical notes, and punctuation from a
+    raw ingredient line so keyword matching works cleanly."""
+    # Remove quantity prefix: leading numbers, fractions (½ ¼ ¾ ⅔), units
+    text = re.sub(
+        r"^[\d½¼¾⅔⅓⅛\s]+(?:kg|g|ml|l|tsp|tbsp|cup|cups|pinch|dash|handful|bunch|cloves?|"
+        r"sticks?|slices?|heads?|sprig|sprigs|packets?|litre|liter)s?\b[.,]?\s*",
+        "", raw, flags=re.IGNORECASE,
+    )
+    # Remove parenthetical alternatives / notes like "(optional)" "(skin on)"
+    text = re.sub(r"\(.*?\)", "", text)
+    # Remove bullet characters and leading/trailing whitespace
+    text = text.lstrip("•").strip(" ,.")
+    return text.lower()
+
+
+def _static_lookup(ingredient_raw: str) -> Optional[dict]:
+    """Return static {low, high, kcal} data for an ingredient, or None."""
+    cleaned = _clean_ingredient_text(ingredient_raw)
+    for keyword, data in _STATIC_UK_DATA_LOWER:
+        if keyword in cleaned:
+            return data
+    return None
+
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
@@ -287,7 +443,14 @@ def compute_cost_range(candidates: list[dict]) -> dict:
 
 
 def research_ingredients(ingredients: list[str], cache_dir: str = "cache") -> list[ResearchResult]:
-    """Research all ingredients. Returns results with TODO flags where research failed."""
+    """Research all ingredients.
+
+    Lookup order:
+    1. Live scraping (Tesco / Sainsbury's / ASDA search pages).
+    2. Pre-built bing HTML evidence files in cache/evidence/.
+    3. Static UK supermarket data table (embedded, used when live sources are
+       unavailable or blocked — e.g. in CI / offline environments).
+    """
     results = []
     for ing in ingredients:
         logger.info("Researching ingredient: %s", ing)
@@ -298,7 +461,23 @@ def research_ingredients(ingredients: list[str], cache_dir: str = "cache") -> li
             kcal, kcal_blocked = _research_kcal(ing, cache_dir)
             blocked = list(set(cost_blocked + kcal_blocked))
 
-            todo = not cost_candidates and kcal is None
+            # ── Static fallback ──────────────────────────────────────────
+            static = _static_lookup(ing)
+            used_static = False
+            if static is not None:
+                if not cost_candidates:
+                    # Convert £/100g to £/g so units match the rest of the system
+                    cost_range = {
+                        "low_avg": static["low"] / 100,
+                        "high_avg": static["high"] / 100,
+                        "notes": "static UK supermarket data (Tesco/Sainsbury's typical, early 2025)",
+                    }
+                    used_static = True
+                if kcal is None:
+                    kcal = static["kcal"] or None
+                    used_static = True
+
+            todo = cost_range["low_avg"] == 0.0 and kcal is None
 
             result = ResearchResult(
                 ingredient_name=ing,
@@ -306,7 +485,11 @@ def research_ingredients(ingredients: list[str], cache_dir: str = "cache") -> li
                 cost_high_avg=cost_range["high_avg"],
                 kcal_per_100g=kcal or 0.0,
                 cost_notes=cost_range["notes"],
-                kcal_notes="kcal/100g from nutrition sites" if kcal else "kcal not found",
+                kcal_notes=(
+                    "kcal/100g from nutrition sites" if (kcal and not used_static)
+                    else ("kcal/100g from static UK data table" if (kcal and used_static)
+                          else "kcal not found")
+                ),
                 blocked_sources=blocked,
                 todo=todo,
             )
