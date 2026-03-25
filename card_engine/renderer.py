@@ -48,6 +48,9 @@ _ITEM_WEIGHTS_G = {
     "lemon": 100.0, "lemons": 100.0,
     "lime": 60.0, "limes": 60.0,
     "potato": 100.0, "potatoes": 100.0,
+    "thigh": 120.0, "thighs": 120.0,
+    "breast": 150.0, "breasts": 150.0,
+    "chicken": 120.0,
 }
 
 
@@ -62,6 +65,28 @@ def _parse_quantity_g(line: str) -> float:
             frac_val = v
             text = text.replace(f, "").strip()
             break
+
+    # Handle range notation first: "X–Y unit" or "X-Y unit" → use midpoint
+    # Covers en-dash (–), hyphen (-), em-dash (—)
+    range_m = re.match(r"^(\d+(?:\.\d+)?)\s*(?:–|—|-)\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?", text)
+    if range_m:
+        lo = float(range_m.group(1))
+        hi = float(range_m.group(2))
+        num = (lo + hi) / 2.0 + frac_val
+        unit_str = (range_m.group(3) or "").lower()
+        unit_singular = unit_str.rstrip("s")
+        for u in (unit_str, unit_singular, unit_singular + "s"):
+            if u in _UNIT_TO_G:
+                return num * _UNIT_TO_G[u]
+        # Unit may be an item name (e.g. "2–3 garlic cloves")
+        rest_r = text[range_m.end():].strip().lower()
+        for key in (unit_str, unit_singular, unit_singular + "s"):
+            if key in _ITEM_WEIGHTS_G:
+                return num * _ITEM_WEIGHTS_G[key]
+        for key, weight in _ITEM_WEIGHTS_G.items():
+            if re.search(r"\b" + re.escape(key) + r"\b", rest_r):
+                return num * weight
+        return num * 50.0
 
     # Match leading number optionally followed by a unit
     m = re.match(r"^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?", text)
@@ -194,15 +219,16 @@ def render_recipe_docx(
     _add_bold_heading(doc, "Title")
     doc.add_paragraph(recipe.title)
 
-    # Yield
+    # Yield — count g, kg, ml and l (1 ml ≈ 1 g for yield estimation)
     _add_bold_heading(doc, "Yield")
     total_g = 0.0
-    _weight_re = re.compile(r"(\d+(?:\.\d+)?)\s*(g|kg)\b", re.IGNORECASE)
+    _weight_re = re.compile(r"(\d+(?:\.\d+)?)\s*(g|kg|ml|l)\b", re.IGNORECASE)
     for ing in recipe.ingredients_raw:
         m = _weight_re.search(ing)
         if m:
             val = float(m.group(1))
-            if m.group(2).lower() == "kg":
+            unit_y = m.group(2).lower()
+            if unit_y in ("kg", "l"):
                 val *= 1000
             total_g += val
 
@@ -266,11 +292,10 @@ def render_recipe_docx(
             f"(estimated from UK supermarket data, {target_portions} portions)"
         )
     else:
-        cost_results = [r for r in research if not r.todo and (r.cost_low_avg > 0 or r.cost_high_avg > 0)]
-        if cost_results:
-            low = sum(r.cost_low_avg for r in cost_results)
-            high = sum(r.cost_high_avg for r in cost_results)
-            cost_text = f"£{low:.2f}–£{high:.2f} (rate sum, estimated)"
+        # No quantity data was parseable — check whether research itself succeeded
+        has_data = any(not r.todo and (r.cost_low_avg > 0 or r.cost_high_avg > 0) for r in research)
+        if has_data:
+            cost_text = "TODO: [quantities not specified in recipe — cost per portion cannot be estimated]"
         else:
             todo_note = research[0].cost_notes if research else "no data"
             cost_text = f"TODO: [cost could not be researched — {todo_note}]"

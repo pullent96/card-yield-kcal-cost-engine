@@ -201,6 +201,28 @@ SITE_SEARCH_URLS = {
     "asda.com": "https://groceries.asda.com/search/{q}",
 }
 
+# ---------------------------------------------------------------------------
+# One-time connectivity probe — performed lazily on first live-research call.
+# Avoids repeated DNS-timeout delays for every ingredient when offline.
+# ---------------------------------------------------------------------------
+_ONLINE: Optional[bool] = None
+
+
+def _check_online() -> bool:
+    """Return True if we can resolve a public DNS name."""
+    global _ONLINE
+    if _ONLINE is not None:
+        return _ONLINE
+    import socket
+    try:
+        socket.setdefaulttimeout(2)
+        socket.getaddrinfo("www.tesco.com", 443)
+        _ONLINE = True
+    except Exception:
+        _ONLINE = False
+    logger.info("Network connectivity: %s", "online" if _ONLINE else "offline — using static data only")
+    return _ONLINE
+
 
 @dataclass
 class ResearchResult:
@@ -333,12 +355,13 @@ def _research_cost(ingredient: str, cache_dir: str) -> tuple[list[dict], list[st
     """Research cost from grocery sites. Returns (candidates, blocked_sources)."""
     candidates: list[dict] = []
     blocked: list[str] = []
-    q = ingredient.replace(" ", "+")
 
-    if not _REQUESTS_AVAILABLE:
+    if not _REQUESTS_AVAILABLE or not _check_online():
+        # Skip live scraping — static fallback will handle it
         return candidates, blocked
 
-    session = requests.Session() if _REQUESTS_AVAILABLE else None
+    q = ingredient.replace(" ", "+")
+    session = requests.Session()
 
     for domain, url_template in SITE_SEARCH_URLS.items():
         url = url_template.format(q=q)
@@ -387,7 +410,8 @@ def _research_kcal(ingredient: str, cache_dir: str) -> tuple[Optional[float], li
     """Research kcal per 100g from nutrition sites. Returns (kcal_per_100g, blocked)."""
     blocked: list[str] = []
 
-    if not _REQUESTS_AVAILABLE:
+    if not _REQUESTS_AVAILABLE or not _check_online():
+        # Skip live scraping — static fallback will handle it
         return None, blocked
 
     session = requests.Session()
@@ -477,7 +501,7 @@ def research_ingredients(ingredients: list[str], cache_dir: str = "cache") -> li
                     kcal = static["kcal"] or None
                     used_static = True
 
-            todo = cost_range["low_avg"] == 0.0 and kcal is None
+            todo = not used_static and cost_range["low_avg"] == 0.0 and kcal is None
 
             result = ResearchResult(
                 ingredient_name=ing,
