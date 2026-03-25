@@ -94,7 +94,7 @@ def render_recipe_docx(
         kcal_text = f"{kcal_result.kcal_per_100g:.0f} kcal per 100g (estimated)"
     else:
         todo_note = ""
-        if research:
+        if len(research) > 0:
             todo_note = research[0].kcal_notes
         kcal_text = f"TODO: [kcal could not be researched — {todo_note or 'no data'}]"
     doc.add_paragraph(kcal_text)
@@ -111,7 +111,7 @@ def render_recipe_docx(
         cost_text = f"£{low:.2f}–£{high:.2f} (estimated range)"
     else:
         todo_note = ""
-        if research:
+        if len(research) > 0:
             todo_note = research[0].cost_notes
         cost_text = f"TODO: [cost could not be researched — {todo_note or 'no data'}]"
     doc.add_paragraph(cost_text)
