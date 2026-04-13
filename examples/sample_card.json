@@ -1,0 +1,40 @@
+{
+  "title": "Chicken Rice Bowl",
+  "slug": "chicken-rice-bowl",
+  "portions": 4,
+  "total_yield_g": 1400.0,
+  "cost": {
+    "low": 4.50,
+    "mid": 5.90,
+    "high": 7.20,
+    "per_portion_mid": 1.48
+  },
+  "kcal": {
+    "low": 1440.0,
+    "mid": 1560.0,
+    "high": 1680.0,
+    "per_portion_mid": 390.0
+  },
+  "ingredients": [
+    {
+      "key": "chicken_thigh",
+      "name": "chicken thigh",
+      "raw_text": "1200g chicken thigh",
+      "quantity": 1200.0,
+      "unit": "g"
+    },
+    {
+      "key": "rice",
+      "name": "rice",
+      "raw_text": "400g rice",
+      "quantity": 400.0,
+      "unit": "g"
+    }
+  ],
+  "method": [
+    "Cook rice per packet instructions.",
+    "Season and grill chicken thighs for 25 minutes.",
+    "Slice chicken and serve over rice."
+  ],
+  "notes": []
+}

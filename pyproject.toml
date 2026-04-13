@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "card-yield-kcal-cost-engine"
+version = "0.1.0"
+description = "Recipe card engine: yield / kcal / cost enrichment pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+    "beautifulsoup4>=4.12",
+    "lxml>=4.9",
+    "python-docx>=1.1",
+]
+
+[project.scripts]
+recipe-engine = "card_engine.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["card_engine*"]
