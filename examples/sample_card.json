@@ -1,0 +1,23 @@
+{
+  "title": "Chicken Rice Bowl",
+  "ingredients_raw": [
+    "1.2kg chicken thigh, boneless",
+    "400g jasmine rice",
+    "2 tbsp soy sauce",
+    "1 tbsp sesame oil",
+    "2 garlic cloves, minced",
+    "1 tsp ginger, grated",
+    "Spring onions to garnish"
+  ],
+  "method_raw": [
+    "Cook rice according to packet instructions.",
+    "Season chicken with soy sauce, garlic and ginger.",
+    "Pan-fry chicken in sesame oil for 6-7 minutes each side.",
+    "Slice chicken and serve over rice.",
+    "Garnish with spring onions."
+  ],
+  "total_time": "30 minutes",
+  "notes": "Great for meal prep. Can substitute chicken breast.",
+  "source_file": "examples/sample_card.json",
+  "content_hash": ""
+}
